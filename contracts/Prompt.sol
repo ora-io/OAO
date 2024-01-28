@@ -24,7 +24,7 @@ contract Prompt is AIOracleCallbackReceiver {
 
     /// @notice Gas limit set on the callback from AIOracle.
     /// @dev Should be set to the maximum amount of gas your callback might reasonably consume.
-    uint64 private constant AIORACLE_CALLBACK_GAS_LIMIT = 100000;
+    uint64 private constant AIORACLE_CALLBACK_GAS_LIMIT = 5000000;
 
     // uint256: modelID, 0 for Llama, 1 for stable diffusion
     // 1.string => 2.string: 1.string: prompt, 2.string: text (for llama), cid (for sd) 

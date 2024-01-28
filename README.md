@@ -29,9 +29,8 @@ Usage process:
 
 Here are the OAO contracts deployed onchain:
 
-- opML: https://sepolia.etherscan.io/address/0x4E2f8768AC857B7a96FD39c92296f2788C0B0e3b
-- AIOracle: https://sepolia.etherscan.io/address/0x4B5f6b69AFd8C973013593083713ce5b1277213B
-- Prompt (example user contract attached to AIOracle): https://sepolia.etherscan.io/address/0x6036F3d704BC9A093c4bb0F3b097966D748379eb
+- AIOracle: [0xb880D47D3894D99157B52A7F869aB3B1E2D4349d](https://sepolia.etherscan.io/address/0xb880D47D3894D99157B52A7F869aB3B1E2D4349d)
+- Prompt (example user contract attached to AIOracle): [0x5d6963003Ad172Fd1D2A2fD18bB3967eA7Aef1a2](https://sepolia.etherscan.io/address/0x5d6963003Ad172Fd1D2A2fD18bB3967eA7Aef1a2)
 
 Currently, you can use the onchain ML model by initiating an onchain transaction by interacting with Prompt contract. We have uploaded two models to OAO: LlaMA 2 (LLM model, modelID: 0) and Stable Diffusion (Image Generation Model, modelID 1).
 
