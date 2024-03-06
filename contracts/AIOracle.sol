@@ -51,7 +51,7 @@ contract AIOracle is IAIOracle {
         bytes4 functionSelector,
         uint64 gasLimit
     ) external payable {
-        require(msg.value >= fee, "insuefficient fee");
+        require(msg.value >= fee, "insufficient fee");
         uint256 requestId = opml.initOpmlRequest(modelId, input);
         // store the request so that anyone can update the result according to the opml
         AICallbackRequestData storage request = requests[requestId];
