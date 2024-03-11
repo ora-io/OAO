@@ -25,12 +25,31 @@ Usage process:
     4. After the challenge period, the submitted result on chain is finalized (results can not be mutated).
 5. When the result is uploaded or updated on chain, the provided result in opML will be dispatched to the user's smart contract via its specific callback function.
 
-## Deployment and Usage
+## Deployment
 
 Here are the OAO contracts deployed onchain:
 
-- AIOracle: [0xb880D47D3894D99157B52A7F869aB3B1E2D4349d](https://sepolia.etherscan.io/address/0xb880D47D3894D99157B52A7F869aB3B1E2D4349d)
-- Prompt (example user contract attached to AIOracle): [0x5d6963003Ad172Fd1D2A2fD18bB3967eA7Aef1a2](https://sepolia.etherscan.io/address/0x5d6963003Ad172Fd1D2A2fD18bB3967eA7Aef1a2)
+- AIOracle: [0x0A0f4321214BB6C7811dD8a71cF587bdaF03f0A0](https://sepolia.etherscan.io/address/0x0A0f4321214BB6C7811dD8a71cF587bdaF03f0A0)
+- Prompt (example user contract attached to AIOracle): [0x3E774275c7761CFb781715A47cAE694BA9dEb44A](https://sepolia.etherscan.io/address/0x3E774275c7761CFb781715A47cAE694BA9dEb44A)
 
-Currently, you can use the onchain ML model by initiating an onchain transaction by interacting with Prompt contract. We have uploaded two models to OAO: LlaMA 2 (LLM model, modelID: 0) and Stable Diffusion (Image Generation Model, modelID 1).
+Currently, you can use the onchain ML model by initiating an onchain transaction by interacting with Prompt contract. We have uploaded two models to OAO.
 
+| modelID | model| 
+| -- | -- |
+| 11 | llama |
+| 50 | Stable Diffusion (SD) |
+
+## Usage
+
+1. Inherit `AIOracleCallbackReceiver`  in your contract and bind with a specific OAO address:
+    ```solidity
+    constructor(IAIOracle _aiOracle) AIOracleCallbackReceiver(_aiOracle) {}
+    ```
+2. Write your callback function to handle the AI result from OAO. Note that only OAO can call this function:
+    ```solidity
+    function callback(uint256 modelId, bytes calldata input, bytes calldata output) external onlyAIOracleCallback()
+    ```
+3. When you want to initiate an AI inference request, call OAO as follows:
+    ```solidity
+    aiOracle.requestCallback(modelId, input, address(this), this.callback.selector, gas_limit);
+    ```

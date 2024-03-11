@@ -5,8 +5,8 @@ pragma solidity ^0.8.9;
 interface IAIOracle {
     /// @notice Event emitted upon receiving a callback request through requestCallback.
     event AICallbackRequest(
-        address account,
-        uint256 requestId,
+        address indexed account,
+        uint256 indexed requestId,
         uint256 modelId,
         bytes input,
         address callbackContract,
@@ -16,7 +16,8 @@ interface IAIOracle {
 
     /// @notice Event emitted when the result is uploaded or update.
     event AICallbackResult(
-        uint256 requestId,
+        address indexed invoker,
+        uint256 indexed requestId,
         bytes output
     );
 
@@ -27,4 +28,6 @@ interface IAIOracle {
         bytes4 functionSelector,
         uint64 gasLimit
     ) external payable;
+
+    function estimateFee(uint256 modelId, uint256 gasLimit) external view returns (uint256);
 }

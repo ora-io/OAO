@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "./IAIOracle.sol";
+import "./interfaces/IAIOracle.sol";
 
 /// @notice A base contract for writing a AIOracle app
 abstract contract AIOracleCallbackReceiver {
@@ -18,17 +18,12 @@ abstract contract AIOracleCallbackReceiver {
         aiOracle = _aiOracle;
     }
 
-    /// @notice Verify that the call came from the AIOracle contract
-    function _verifyMessageSource() internal view {
+    /// @notice Verify this is a callback by the aiOracle contract 
+    modifier onlyAIOracleCallback() {
         IAIOracle foundRelayAddress = IAIOracle(msg.sender);
         if (foundRelayAddress != aiOracle) {
             revert UnauthorizedCallbackSource(aiOracle, foundRelayAddress);
         }
-    }
-
-    /// @notice Verify this is a callback by the aiOracle contract 
-    modifier onlyAIOracleCallback() {
-        _verifyMessageSource();
         _;
     }
 }
