@@ -26,4 +26,16 @@ abstract contract AIOracleCallbackReceiver {
         }
         _;
     }
+
+    /**
+     * @dev the callback function in OAO, should add the modifier onlyAIOracleCallback!
+     * @param requestId Id for the request in OAO (unique per request)
+     * @param output AI model's output
+     * @param callbackData user-defined data (The same as when the user call aiOracle.requestCallback)
+     */
+    function aiOracleCallback(uint256 requestId, bytes calldata output, bytes calldata callbackData) external virtual;
+
+    function isFinalized(uint256 requestId) external view returns (bool) {
+        return aiOracle.isFinalized(requestId);
+    }
 }

@@ -7,17 +7,31 @@ import "./AIOracleCallbackReceiver.sol";
 
 // this contract is for ai.hyperoracle.io websie
 contract Prompt is AIOracleCallbackReceiver {
+
     event promptsUpdated(
+        uint256 requestId,
         uint256 modelId,
         string input,
-        string output
+        string output,
+        bytes callbackData
     );
 
     event promptRequest(
+        uint256 requestId,
         address sender, 
         uint256 modelId,
         string prompt
     );
+
+    struct AIOracleRequest {
+        address sender;
+        uint256 modelId;
+        bytes input;
+        bytes output;
+    }
+
+    // requestId => AIOracleRequest
+    mapping(uint256 => AIOracleRequest) public requests;
 
     /// @notice Initialize the contract, binding it to a specified AIOracle.
     constructor(IAIOracle _aiOracle) AIOracleCallbackReceiver(_aiOracle) {}
@@ -26,18 +40,20 @@ contract Prompt is AIOracleCallbackReceiver {
     /// @dev Should be set to the maximum amount of gas your callback might reasonably consume.
     uint64 public constant AIORACLE_CALLBACK_GAS_LIMIT = 5000000;
 
-    // uint256: modelID, 0 for Llama, 1 for stable diffusion
-    // 1.string => 2.string: 1.string: prompt, 2.string: text (for llama), cid (for sd) 
+    // uint256: modelID => (string: prompt => string: output)
     mapping(uint256 => mapping(string => string)) public prompts;
 
     function getAIResult(uint256 modelId, string calldata prompt) external view returns (string memory) {
         return prompts[modelId][prompt];
     }
 
-    // only the AI Oracle can call this function
-    function storeAIResult(uint256 modelId, bytes calldata input, bytes calldata output) external onlyAIOracleCallback() {
-        prompts[modelId][string(input)] = string(output);
-        emit promptsUpdated(modelId, string(input), string(output));
+    // the callback function, only the AI Oracle can call this function
+    function aiOracleCallback(uint256 requestId, bytes calldata output, bytes calldata callbackData) external override onlyAIOracleCallback() {
+        // since we do not set the callbackData in this example, the callbackData should be empty
+        AIOracleRequest storage request = requests[requestId];
+        request.output = output;
+        prompts[request.modelId][string(request.input)] = string(output);
+        emit promptsUpdated(requestId, request.modelId, string(request.input), string(output), callbackData);
     }
 
     function estimateFee(uint256 modelId) public view returns (uint256) {
@@ -46,9 +62,14 @@ contract Prompt is AIOracleCallbackReceiver {
 
     function calculateAIResult(uint256 modelId, string calldata prompt) payable external {
         bytes memory input = bytes(prompt);
-        aiOracle.requestCallback{value: msg.value}(
-            modelId, input, address(this), this.storeAIResult.selector, AIORACLE_CALLBACK_GAS_LIMIT
+        // we do not need to set the callbackData in this example
+        uint256 requestId = aiOracle.requestCallback{value: msg.value}(
+            modelId, input, address(this), AIORACLE_CALLBACK_GAS_LIMIT, ""
         );
-        emit promptRequest(msg.sender, modelId, prompt);
+        AIOracleRequest storage request = requests[requestId];
+        request.input = input;
+        request.sender = msg.sender;
+        request.modelId = modelId;
+        emit promptRequest(requestId, msg.sender, modelId, prompt);
     }
 }

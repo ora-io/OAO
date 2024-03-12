@@ -8,7 +8,7 @@ import "./interfaces/IAIOracle.sol";
 contract AIOracle is IAIOracle {
 
     function opml() public pure returns (IOpml) {
-        return IOpml(0x00a190129a204c6741424acCA1FC09FE346be032);
+        return IOpml(0xa8a416519CD5dd60c1Dc97B195443D3263a6cb60);
     }
 
     function owner() public pure returns (address) {
@@ -17,6 +17,10 @@ contract AIOracle is IAIOracle {
 
     function server() public pure returns (address) {
         return 0xf5aeB5A4B35be7Af7dBfDb765F99bCF479c917BD;
+    }
+
+    function callbackFunctionSelector() public pure returns (bytes4) {
+        return bytes4(0xb0347814);
     }
 
     modifier onlyOwner() {
@@ -38,8 +42,8 @@ contract AIOracle is IAIOracle {
         uint256 modelId;
         bytes input;
         address callbackContract;
-        bytes4 functionSelector;
         uint64 gasLimit;
+        bytes callbackData;
     }
 
     mapping(uint256 => AICallbackRequestData) public requests;
@@ -170,33 +174,34 @@ contract AIOracle is IAIOracle {
         model.receiverPercentage = receiverPercentage;
     }
     
+    function isFinalized(uint256 requestId) external view returns (bool) {
+        return opml().isFinalized(requestId);
+    }
+
     // view function
     function _validateParams(
         uint256 modelId,
-        bytes calldata input, 
+        bytes memory input, 
         address callbackContract, 
-        bytes4 functionSelector,
         uint64 gasLimit
     ) internal ifModelExists(modelId) notBlacklisted(callbackContract) {
         ModelData storage model = models[modelId];
         require(msg.value >= model.fee + gasPrice * gasLimit, "insufficient fee");
         model.accumulateRevenue += model.fee * model.receiverPercentage / 100;
         require(input.length > 0, "input not uploaded");
-        bool noFunctionSelector = functionSelector == bytes4(0);
         bool noCallback = callbackContract == address(0);
-        require(noFunctionSelector == noCallback, "inconsistent callback params");
         require(noCallback == (gasLimit == 0), "gasLimit cannot be 0");
     }
 
     function requestCallback(
         uint256 modelId,
-        bytes calldata input,
+        bytes memory input,
         address callbackContract,
-        bytes4 functionSelector,
-        uint64 gasLimit
-    ) external payable {
+        uint64 gasLimit,
+        bytes memory callbackData
+    ) external payable returns (uint256) {
         // validate params
-        _validateParams(modelId, input, callbackContract, functionSelector, gasLimit);
+        _validateParams(modelId, input, callbackContract, gasLimit);
 
         ModelData memory model = models[modelId];
 
@@ -210,11 +215,13 @@ contract AIOracle is IAIOracle {
         request.modelId = modelId;
         request.input = input;
         request.callbackContract = callbackContract;
-        request.functionSelector = functionSelector;
         request.gasLimit = gasLimit;
+        request.callbackData = callbackData;
 
         // Emit event
-        emit AICallbackRequest(msg.sender, requestId, modelId, input, callbackContract, functionSelector, gasLimit);
+        emit AICallbackRequest(msg.sender, requestId, modelId, input, callbackContract, gasLimit, callbackData);
+
+        return requestId;
     }
 
     // any can call this function
@@ -238,7 +245,7 @@ contract AIOracle is IAIOracle {
 
         // invoke callback
         if(request.callbackContract != address(0)) {
-            bytes memory payload = abi.encodeWithSelector(request.functionSelector, request.modelId, request.input, output);
+            bytes memory payload = abi.encodeWithSelector(callbackFunctionSelector(), request.requestId, output, request.callbackData);
             (bool success, bytes memory data) = request.callbackContract.call{gas: request.gasLimit}(payload);
             require(success, "failed to call selector");
             if (!success) {
@@ -263,7 +270,7 @@ contract AIOracle is IAIOracle {
 
         // invoke callback
         if(request.callbackContract != address(0)) {
-            bytes memory payload = abi.encodeWithSelector(request.functionSelector, request.modelId, request.input, output);
+            bytes memory payload = abi.encodeWithSelector(callbackFunctionSelector(), request.requestId, output, request.callbackData);
             (bool success, bytes memory data) = request.callbackContract.call{gas: request.gasLimit}(payload);
             require(success, "failed to call selector");
             if (!success) {

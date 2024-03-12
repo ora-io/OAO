@@ -30,7 +30,7 @@ Usage process:
 Here are the OAO contracts deployed onchain:
 
 - AIOracle: [0x0A0f4321214BB6C7811dD8a71cF587bdaF03f0A0](https://sepolia.etherscan.io/address/0x0A0f4321214BB6C7811dD8a71cF587bdaF03f0A0)
-- Prompt (example user contract attached to AIOracle): [0x3E774275c7761CFb781715A47cAE694BA9dEb44A](https://sepolia.etherscan.io/address/0x3E774275c7761CFb781715A47cAE694BA9dEb44A)
+- Prompt (example user contract attached to AIOracle): [0x64BF816c3b90861a489A8eDf3FEA277cE1Fa0E82](https://sepolia.etherscan.io/address/0x64BF816c3b90861a489A8eDf3FEA277cE1Fa0E82)
 
 Currently, you can use the onchain ML model by initiating an onchain transaction by interacting with Prompt contract. We have uploaded two models to OAO.
 
@@ -47,9 +47,9 @@ Currently, you can use the onchain ML model by initiating an onchain transaction
     ```
 2. Write your callback function to handle the AI result from OAO. Note that only OAO can call this function:
     ```solidity
-    function callback(uint256 modelId, bytes calldata input, bytes calldata output) external onlyAIOracleCallback()
+    function aiOracleCallback(uint256 requestId, bytes calldata output, bytes calldata callbackData) external override onlyAIOracleCallback()
     ```
 3. When you want to initiate an AI inference request, call OAO as follows:
     ```solidity
-    aiOracle.requestCallback(modelId, input, address(this), this.callback.selector, gas_limit);
+    aiOracle.requestCallback(modelId, input, address(this), gas_limit, callbackData);
     ```

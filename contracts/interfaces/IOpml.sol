@@ -10,6 +10,7 @@ interface IOpml {
 
 	function startChallenge(uint256 requestId, bytes calldata output, bytes32 finalState, uint256 stepCount) external returns (uint256 challengeId);
 
+
 	function respondState(uint256 challengeId, bytes32 stateHash) external;
 
 	function proposeState(uint256 challengeId, bytes32 stateHash) external;
