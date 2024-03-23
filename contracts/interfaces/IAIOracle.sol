@@ -16,8 +16,9 @@ interface IAIOracle {
 
     /// @notice Event emitted when the result is uploaded or update.
     event AICallbackResult(
-        address indexed invoker,
+        address indexed account,
         uint256 indexed requestId,
+        address invoker,
         bytes output
     );
 

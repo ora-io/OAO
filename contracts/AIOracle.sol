@@ -7,29 +7,16 @@ import "./interfaces/IAIOracle.sol";
 
 contract AIOracle is IAIOracle {
 
-    function opml() public pure returns (IOpml) {
-        return IOpml(0xa8a416519CD5dd60c1Dc97B195443D3263a6cb60);
-    }
-
-    function owner() public pure returns (address) {
-        return 0xf5aeB5A4B35be7Af7dBfDb765F99bCF479c917BD;
-    }
-
-    function server() public pure returns (address) {
-        return 0xf5aeB5A4B35be7Af7dBfDb765F99bCF479c917BD;
-    }
-
-    function callbackFunctionSelector() public pure returns (bytes4) {
-        return bytes4(0xb0347814);
-    }
+    address constant public server = 0xf5aeB5A4B35be7Af7dBfDb765F99bCF479c917BD;
+    bytes4 constant public callbackFunctionSelector = 0xb0347814;
 
     modifier onlyOwner() {
-        require(msg.sender == owner(), "Not the owner");
+        require(msg.sender == owner, "Not the owner");
         _;
     }
 
     modifier onlyServer() {
-        require(msg.sender == server(), "Only server");
+        require(msg.sender == server, "Only server");
         _;
     }
 
@@ -62,8 +49,18 @@ contract AIOracle is IAIOracle {
     mapping (uint256 => bool) modelExists;
 
     uint256 public gasPrice;
-
     uint256[] public modelIDs;
+    IOpml public opml;
+    address public owner;
+
+    function transferOwnership(address newOwner) public {
+        if(owner == address(0)) {
+            require(msg.sender == server, "only server can init owner");
+        } else {
+            require(msg.sender == owner, "Not the owner");
+        }
+        owner = newOwner;
+    }
 
     function addToBlacklist(address _address) external onlyOwner {
         blacklist[_address] = true;
@@ -99,6 +96,15 @@ contract AIOracle is IAIOracle {
 
     // remove the model from OAO, so OAO would not serve the model 
     function removeModel(uint256 modelId) external onlyOwner ifModelExists(modelId) {
+        // claim the corresponding revenue first
+        ModelData storage model = models[modelId];
+        if (model.accumulateRevenue > 0) {
+            uint256 transferRevenue = model.accumulateRevenue;
+            model.accumulateRevenue = 0;
+            (bool success, ) = (model.receiver).call{value: transferRevenue}("");
+            require(success, "claimModelRevenue transfer failed");            
+        }
+        // remove model
         modelExists[modelId] = false;
         // remove from modelIDs
         for (uint i = 0; i < modelIDs.length; i++) {
@@ -121,7 +127,12 @@ contract AIOracle is IAIOracle {
             modelRevenue += model.accumulateRevenue;
         }
         uint256 ownerRevenue = address(this).balance - modelRevenue;
-        payable(msg.sender).transfer(ownerRevenue);
+        (bool success, ) = (msg.sender).call{value: ownerRevenue}("");
+        require(success, "withdraw failed");
+    }
+
+    function setOpml(address newOpml) external onlyOwner {
+        opml = IOpml(newOpml);
     }
 
     function setModelFee(uint256 modelId, uint256 _fee) external onlyOwner ifModelExists(modelId) {
@@ -161,7 +172,7 @@ contract AIOracle is IAIOracle {
         model.fee = fee;
         model.receiver = receiver;
         model.receiverPercentage = receiverPercentage;
-        opml().uploadModel(modelHash, programHash);
+        opml.uploadModel(modelHash, programHash);
     }
 
     function updateModel(uint256 modelId, bytes32 modelHash, bytes32 programHash, uint256 fee, address receiver, uint256 receiverPercentage) external onlyOwner ifModelExists(modelId) {
@@ -172,10 +183,11 @@ contract AIOracle is IAIOracle {
         model.fee = fee;
         model.receiver = receiver;
         model.receiverPercentage = receiverPercentage;
+        opml.uploadModel(modelHash, programHash);
     }
     
     function isFinalized(uint256 requestId) external view returns (bool) {
-        return opml().isFinalized(requestId);
+        return opml.isFinalized(requestId);
     }
 
     // view function
@@ -190,7 +202,7 @@ contract AIOracle is IAIOracle {
         model.accumulateRevenue += model.fee * model.receiverPercentage / 100;
         require(input.length > 0, "input not uploaded");
         bool noCallback = callbackContract == address(0);
-        require(noCallback == (gasLimit == 0), "gasLimit cannot be 0");
+        require(noCallback == (gasLimit == 0), "Invalid gasLimit");
     }
 
     function requestCallback(
@@ -206,7 +218,7 @@ contract AIOracle is IAIOracle {
         ModelData memory model = models[modelId];
 
         // init opml request
-        uint256 requestId = opml().initOpmlRequest(model.modelHash, model.programHash, input);
+        uint256 requestId = opml.initOpmlRequest(model.modelHash, model.programHash, input);
 
         // store the request so that anyone can update the result according to the opml
         AICallbackRequestData storage request = requests[requestId];
@@ -219,7 +231,7 @@ contract AIOracle is IAIOracle {
         request.callbackData = callbackData;
 
         // Emit event
-        emit AICallbackRequest(msg.sender, requestId, modelId, input, callbackContract, gasLimit, callbackData);
+        emit AICallbackRequest(request.account, requestId, modelId, input, callbackContract, gasLimit, callbackData);
 
         return requestId;
     }
@@ -228,8 +240,10 @@ contract AIOracle is IAIOracle {
     function claimModelRevenue(uint256 modelId) external ifModelExists(modelId) {
         ModelData storage model = models[modelId];
         require(model.accumulateRevenue > 0, "accumulate revenue is 0");
-        payable(model.receiver).transfer(model.accumulateRevenue);
+        uint256 transferRevenue = model.accumulateRevenue;
         model.accumulateRevenue = 0;
+        (bool success, ) = (model.receiver).call{value: transferRevenue}("");
+        require(success, "claimModelRevenue transfer failed");
     }
 
 
@@ -240,12 +254,12 @@ contract AIOracle is IAIOracle {
         AICallbackRequestData storage request = requests[requestId];
 
         // get Latest output of request
-        bytes memory output = opml().getOutput(requestId);
+        bytes memory output = opml.getOutput(requestId);
         require(output.length > 0, "output not uploaded");
 
         // invoke callback
         if(request.callbackContract != address(0)) {
-            bytes memory payload = abi.encodeWithSelector(callbackFunctionSelector(), request.requestId, output, request.callbackData);
+            bytes memory payload = abi.encodeWithSelector(callbackFunctionSelector, request.requestId, output, request.callbackData);
             (bool success, bytes memory data) = request.callbackContract.call{gas: request.gasLimit}(payload);
             require(success, "failed to call selector");
             if (!success) {
@@ -257,7 +271,7 @@ contract AIOracle is IAIOracle {
 
         // store the result
         outputOfRequest[requestId] = output;
-        emit AICallbackResult(msg.sender, requestId, output);
+        emit AICallbackResult(request.account, requestId, msg.sender, output);
     }
 
     // payload includes (function selector, input, output)
@@ -266,11 +280,11 @@ contract AIOracle is IAIOracle {
         AICallbackRequestData storage request = requests[requestId];
         
         // others can challenge if the result is incorrect!
-        opml().uploadResult(requestId, output);
+        opml.uploadResult(requestId, output);
 
         // invoke callback
         if(request.callbackContract != address(0)) {
-            bytes memory payload = abi.encodeWithSelector(callbackFunctionSelector(), request.requestId, output, request.callbackData);
+            bytes memory payload = abi.encodeWithSelector(callbackFunctionSelector, request.requestId, output, request.callbackData);
             (bool success, bytes memory data) = request.callbackContract.call{gas: request.gasLimit}(payload);
             require(success, "failed to call selector");
             if (!success) {
@@ -282,7 +296,7 @@ contract AIOracle is IAIOracle {
 
         // store the result
         outputOfRequest[requestId] = output;
-        emit AICallbackResult(msg.sender, requestId, output);
+        emit AICallbackResult(request.account, requestId, msg.sender, output);
 
         gasPrice = tx.gasprice;
     }
