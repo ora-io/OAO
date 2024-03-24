@@ -29,8 +29,21 @@ Usage process:
 
 Here are the OAO contracts deployed onchain:
 
-- AIOracle: [0x0A0f4321214BB6C7811dD8a71cF587bdaF03f0A0](https://sepolia.etherscan.io/address/0x0A0f4321214BB6C7811dD8a71cF587bdaF03f0A0)
-- Prompt (example user contract attached to AIOracle): [0x64BF816c3b90861a489A8eDf3FEA277cE1Fa0E82](https://sepolia.etherscan.io/address/0x64BF816c3b90861a489A8eDf3FEA277cE1Fa0E82)
+**Sepolia**
+
+| contract | Sepolia Address |
+|--|--|
+| OAO    | 0x0A0f4321214BB6C7811dD8a71cF587bdaF03f0A0 |  
+| prompt | 0xe75af5294f4CB4a8423ef8260595a54298c7a2FB |
+| SimplePrompt | 0x696c83111a49eBb94267ecf4DDF6E220D5A80129 |
+
+**ETH MainNET**
+
+| contract | Mainnet Address |
+|--|--|
+| OAO proxy    | 0x0A0f4321214BB6C7811dD8a71cF587bdaF03f0A0 |  
+| prompt | 0xb880D47D3894D99157B52A7F869aB3B1E2D4349d |
+| SimplePrompt | 0x61423153f111BCFB28dd264aBA8d9b5C452228D2 | 
 
 Currently, you can use the onchain ML model by initiating an onchain transaction by interacting with Prompt contract. We have uploaded two models to OAO.
 

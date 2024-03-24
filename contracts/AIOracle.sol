@@ -246,6 +246,9 @@ contract AIOracle is IAIOracle {
         require(success, "claimModelRevenue transfer failed");
     }
 
+    function getOutput(uint256 requestId) external view returns (bytes memory output) {
+        return opml.getOutput(requestId);
+    }
 
     // call this function if the opml result is challenged and updated!
     // anyone can call it!
@@ -269,8 +272,6 @@ contract AIOracle is IAIOracle {
             }
         }
 
-        // store the result
-        outputOfRequest[requestId] = output;
         emit AICallbackResult(request.account, requestId, msg.sender, output);
     }
 
@@ -294,8 +295,6 @@ contract AIOracle is IAIOracle {
             }
         }
 
-        // store the result
-        outputOfRequest[requestId] = output;
         emit AICallbackResult(request.account, requestId, msg.sender, output);
 
         gasPrice = tx.gasprice;
