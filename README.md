@@ -29,7 +29,7 @@ Usage process:
 
 Here are the OAO contracts deployed onchain:
 
-**Sepolia**
+**ETH Sepolia**
 
 | contract | Sepolia Address |
 |--|--|
@@ -37,18 +37,35 @@ Here are the OAO contracts deployed onchain:
 | prompt | 0xe75af5294f4CB4a8423ef8260595a54298c7a2FB |
 | SimplePrompt | 0x696c83111a49eBb94267ecf4DDF6E220D5A80129 |
 
-**ETH MainNET**
+**ETH Mainnet**
 
 | contract | Mainnet Address |
 |--|--|
-| OAO proxy    | 0x0A0f4321214BB6C7811dD8a71cF587bdaF03f0A0 |  
+| OAO    | 0x0A0f4321214BB6C7811dD8a71cF587bdaF03f0A0 |  
 | prompt | 0xb880D47D3894D99157B52A7F869aB3B1E2D4349d |
 | SimplePrompt | 0x61423153f111BCFB28dd264aBA8d9b5C452228D2 | 
+
+**Optimism Sepolia**
+
+| contract/EOA | Sepolia Address |
+|--|--|
+| OAO    | 0x0A0f4321214BB6C7811dD8a71cF587bdaF03f0A0 |  
+| prompt | 0x3c8Cd1714AC9c380702D160BE4cee0D291Eb89C0 |
+| SimplePrompt | 0xf6919ebb1bFdD282c4edc386bFE3Dea1a1D8AC16 | 
+
+**Optimism Mainnet**
+
+| contract/EOA | Mainnet Address |
+|--|--|
+| OAO    | 0x0A0f4321214BB6C7811dD8a71cF587bdaF03f0A0 |  
+| prompt | 0xC3287BDEF03b925A7C7f54791EDADCD88e632CcD |
+| SimplePrompt | 0xBC24514E541d5CBAAC1DD155187A171a593e5CF6 | 
 
 Currently, you can use the onchain ML model by initiating an onchain transaction by interacting with Prompt contract. We have uploaded two models to OAO.
 
 | modelID | model| 
 | -- | -- |
+| 9  | grok (only on mainnet) |
 | 11 | llama |
 | 50 | Stable Diffusion (SD) |
 
