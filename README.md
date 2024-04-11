@@ -65,7 +65,6 @@ Currently, you can use the onchain ML model by initiating an onchain transaction
 
 | modelID | model| 
 | -- | -- |
-| 9  | grok (only on mainnet) |
 | 11 | llama |
 | 50 | Stable Diffusion (SD) |
 
