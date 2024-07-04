@@ -44,9 +44,6 @@ contract SimplePrompt is AIOracleCallbackReceiver {
     /// @notice Initialize the contract, binding it to a specified AIOracle.
     constructor(IAIOracle _aiOracle) AIOracleCallbackReceiver(_aiOracle) {
         owner = msg.sender;
-        callbackGasLimit[50] = 200_000; // SD 500k
-        callbackGasLimit[11] = 1_500_000; // llama
-        callbackGasLimit[9] = 1_500_000; // grok
     }
 
     function setCallbackGasLimit(uint256 modelId, uint64 gasLimit) external onlyOwner {
