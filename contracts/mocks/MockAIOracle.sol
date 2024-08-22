@@ -56,7 +56,7 @@ contract MockAIOracle is IAIOracle {
     }
 
     mapping(uint256 => AICallbackRequestData) public requests;
-    mapping(uint256 => bytes) public outputOfRequest;
+    mapping(uint256 => bytes32) public outputHashOfRequest;
 
     struct ModelData {
         bytes32 modelHash;
@@ -249,12 +249,12 @@ contract MockAIOracle is IAIOracle {
         AICallbackRequestData storage request = requests[requestId];
 
         // get Latest output of request
-        bytes memory output = opml().getOutput(requestId);
-        require(output.length > 0, "output not uploaded");
+        bytes32 outputHash = opml().getOutputHash(requestId);
+        require(outputHash != bytes32(0), "output not uploaded");
 
         // invoke callback
         if(request.callbackContract != address(0)) {
-            bytes memory payload = abi.encodeWithSelector(callbackFunctionSelector(), request.requestId, output, request.callbackData);
+            bytes memory payload = abi.encodeWithSelector(callbackFunctionSelector(), request.requestId, outputHash, request.callbackData);
             (bool success, bytes memory data) = request.callbackContract.call{gas: request.gasLimit}(payload);
             require(success, "failed to call selector");
             if (!success) {
@@ -265,8 +265,9 @@ contract MockAIOracle is IAIOracle {
         }
 
         // store the result
-        outputOfRequest[requestId] = output;
-        emit AICallbackResult(request.account, requestId, msg.sender, output);
+        outputHashOfRequest[requestId] = outputHash;
+        // Commented out the code below because the new version can only obtain outputHash without output.
+        // emit AICallbackResult(request.account, requestId, msg.sender, output);
     }
 
     // payload includes (function selector, input, output)
@@ -290,7 +291,7 @@ contract MockAIOracle is IAIOracle {
         }
 
         // store the result
-        outputOfRequest[requestId] = output;
+        outputHashOfRequest[requestId] = keccak256(output);
         emit AICallbackResult(request.account, requestId, msg.sender, output);
 
         gasPrice = tx.gasprice;

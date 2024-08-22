@@ -10,7 +10,6 @@ interface IOpml {
 
 	function startChallenge(uint256 requestId, bytes calldata output, bytes32 finalState, uint256 stepCount) external returns (uint256 challengeId);
 
-
 	function respondState(uint256 challengeId, bytes32 stateHash) external;
 
 	function proposeState(uint256 challengeId, bytes32 stateHash) external;
@@ -19,9 +18,9 @@ interface IOpml {
 
   function isFinalized(uint256 requestId) external view returns (bool);
 
-	function getOutput(uint256 requestId) external view returns (bytes memory output);
+	function getOutputHash(uint256 requestId) external view returns (bytes32);
 
 	function confirm(uint256 requestId, bytes32 responseHash) external;
 
-	event Confirm(uint256 requestId, bytes32 responseHash);
+	event Confirm(address indexed user, uint256 requestId, bytes32 responseHash);
 }

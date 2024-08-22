@@ -10,6 +10,7 @@ contract DummyOpml is IOpml {
     address oracle;
     
     mapping(address => bool) public whitelist;
+    mapping(address => mapping(uint256 => bool)) public isConfirmedRequestBy;
 
     modifier onlyWhitelisted() {
         require(whitelist[msg.sender], "Address not whitelisted");
@@ -65,11 +66,11 @@ contract DummyOpml is IOpml {
     mapping(uint256 => ChallengeData) public challenges;
 
     struct RequestData {
-        bytes input;
+        bytes32 inputHash;
         bytes32 modelHash;
         bytes32 programHash;
         bytes32 startState;
-        bytes output;
+        bytes32 outputHash;
         address submitter;
         uint256 challengeId;
         bool isInChallenge;
@@ -118,7 +119,7 @@ contract DummyOpml is IOpml {
         requestId = lastRequestId++;
         requestExists[requestId] = true;
         RequestData storage request = requests[requestId];
-        request.input = input;
+        request.inputHash = keccak256(input);
         request.modelHash = modelHash;
         request.programHash = programHash;
         request.startState = constructStartState(modelHash, programHash, input);
@@ -128,10 +129,10 @@ contract DummyOpml is IOpml {
     /// @notice submitter should first upload the results and stake some money, waiting for the challenge process. Note that the results can only be set once (TODO)
     function uploadResult(uint256 requestId, bytes calldata output) public onlyWhitelisted ifRequestExists(requestId) {
         RequestData storage request = requests[requestId];
-        require(request.output.length == 0, "to upload request, make sure that the request is never served by others. If you think the provided result is incorrect, please challenge it!");
+        require(request.outputHash == 0, "to upload request, make sure that the request is never served by others. If you think the provided result is incorrect, please challenge it!");
         require(output.length != 0, "can not upload a zero-length output");
         request.submitBlockTime = block.number;
-        request.output = output;
+        request.outputHash = keccak256(output);
         request.submitter = msg.sender;
     }
 
@@ -144,10 +145,10 @@ contract DummyOpml is IOpml {
         uint256 stepCount
     ) external onlyWhitelisted ifRequestExists(requestId) returns (uint256) {
         RequestData storage request = requests[requestId];
-        require(request.output.length != 0, "you can challenge only when someone upload incorrect result! This request has not been served yet. please upload result instead of challenge it");
+        require(request.outputHash != 0, "you can challenge only when someone upload incorrect result! This request has not been served yet. please upload result instead of challenge it");
         require(!isFinalized(requestId), "the request is finalized! can not challenge a finalized request");
         require(!request.isInChallenge, "the request is still in challenge, please wait for the end of the challenge");
-        require(keccak256(request.output) != keccak256(output), "you should have a different output, otherwise, you agree with the submitter, do not challenge it");
+        require(request.outputHash != keccak256(output), "you should have a different output, otherwise, you agree with the submitter, do not challenge it");
         // TODO: check the outputHash is consistent with the finalState!
         request.isInChallenge = true;
         // Write input hash at predefined memory address.
@@ -194,11 +195,10 @@ contract DummyOpml is IOpml {
         // return request.isFinalized;
     }
 
-	function getOutput(uint256 requestId) external view ifRequestExists(requestId) returns (bytes memory output) {
+	function getOutputHash(uint256 requestId) external view ifRequestExists(requestId) returns (bytes32) {
         RequestData storage request = requests[requestId];
-        require(request.output.length != 0, "output not uploaded");
-        output =  request.output;
-        return output;
+        require(request.outputHash != 0, "output not uploaded");
+        return request.outputHash;
     }
 
     function setOracleAddress(address _oracle) external onlyOwner {
@@ -215,8 +215,13 @@ contract DummyOpml is IOpml {
         whitelist[_address] = false;
     }
 
-    function confirm(uint256 requestId, bytes32 responseHash) external {
-        // TODO: Temporary placeholder code, formal code will be updated later.
-        emit Confirm(requestId, responseHash);
+    function confirm(uint256 requestId, bytes32 outputHash) external {
+        require(!isConfirmedRequestBy[msg.sender][requestId], "request has been confirmed");
+        RequestData memory request = requests[requestId];
+        require(request.outputHash != 0, "no output submit yet");
+        require(request.outputHash == outputHash, "outputHash does not match the expected outputHash");
+        
+        isConfirmedRequestBy[msg.sender][requestId] = true;
+        emit Confirm(msg.sender, requestId, outputHash);
     }
 }

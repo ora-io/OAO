@@ -257,19 +257,20 @@ contract AIOracle is IAIOracle {
         require(success, "claimModelRevenue transfer failed");
     }
 
-    function getOutput(uint256 requestId) external view returns (bytes memory output) {
-        return opml.getOutput(requestId);
+    function getOutputHash(uint256 requestId) external view returns (bytes32) {
+        return opml.getOutputHash(requestId);
     }
 
     // call this function if the opml result is challenged and updated!
     // anyone can call it!
-    function updateResult(uint256 requestId) external {
+    function updateResult(uint256 requestId, bytes calldata output) external {
+        require(output.length > 0, "can not upload a zero-length output");
         // read request of requestId
         AICallbackRequestData storage request = requests[requestId];
 
         // get Latest output of request
-        bytes memory output = opml.getOutput(requestId);
-        require(output.length > 0, "output not uploaded");
+        bytes32 outputHash = opml.getOutputHash(requestId);
+        require(outputHash == keccak256(output), "output should match opml result");
 
         // invoke callback
         if(request.callbackContract != address(0)) {

@@ -52,4 +52,39 @@ contract ProxyFactory {
         console.log("proxy: ");
         console.log(address(proxy));
     }
+
+    function deployBrute(address impl, uint256 tick) public view returns(uint256) {
+        address owner = msg.sender;
+        bytes memory data = "";
+        for (uint i = tick; i < tick + 200; i++) {
+            bytes32 salt = bytes32(i);
+            bytes32 bytecodeHash = keccak256(abi.encodePacked(
+                type(TransparentUpgradeableProxy).creationCode, abi.encode(impl, owner, data)
+            ));
+            address predictAddress = address(
+                uint160(
+                    uint(
+                        keccak256(
+                            abi.encodePacked(
+                                bytes1(0xFF),
+                                address(this),
+                                salt,
+                                bytecodeHash
+                            )
+                        )
+                    )
+                )
+            );
+
+            if(_doesAddressStartWith(predictAddress, 0x0a0)) {
+              console.log(i);
+              bytes memory _data = abi.encodePacked(
+                type(TransparentUpgradeableProxy).creationCode, abi.encode(impl, owner, data)
+            );
+              console.logBytes(_data);
+              return i;
+            }
+        }
+        return 0;
+    }
 }
