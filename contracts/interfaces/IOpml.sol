@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 interface IOpml {
-    function uploadModel(bytes32 modelHash, bytes32 programHash) external;
+  function uploadModel(bytes32 modelHash, bytes32 programHash) external;
 
 	function initOpmlRequest(bytes32 modelHash, bytes32 programHash, bytes calldata input) external returns (uint256 requestId); 
 
@@ -17,7 +17,11 @@ interface IOpml {
 
 	function assertStateTransition(uint256 challengeId) external;
 
-    function isFinalized(uint256 requestId) external view returns (bool);
+  function isFinalized(uint256 requestId) external view returns (bool);
 
 	function getOutput(uint256 requestId) external view returns (bytes memory output);
+
+	function confirm(uint256 requestId, bytes32 responseHash) external;
+
+	event Confirm(uint256 requestId, bytes32 responseHash);
 }
