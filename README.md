@@ -61,6 +61,78 @@ Here are the OAO contracts deployed onchain:
 | prompt | 0xC3287BDEF03b925A7C7f54791EDADCD88e632CcD |
 | SimplePrompt | 0xBC24514E541d5CBAAC1DD155187A171a593e5CF6 | 
 
+**Manta Mainnet**
+
+| contract/EOA | Sepolia Address |
+|--|--|
+| OAO    | 0x0A0f4321214BB6C7811dD8a71cF587bdaF03f0A0 |  
+| prompt | 0xBC24514E541d5CBAAC1DD155187A171a593e5CF6 |
+| SimplePrompt | 0x523622DfEd0243B0DF80CC9275764B0f432D33E3 | 
+
+**Manta Sepolia Testnet**
+
+| contract/EOA | Mainnet Address |
+|--|--|
+| OAO    | 0x0A0f4321214BB6C7811dD8a71cF587bdaF03f0A0 |  
+| prompt | 0xC20DeDbE8642b77EfDb4372915947c87b7a526bD |
+| SimplePrompt | 0x3bfD1Cc919bfeC7795b600E764aDa001b58f122a | 
+
+**Arbitrum Sepolia Testnet**
+
+| contract/EOA | Sepolia Address |
+|--|--|
+| OAO    | 0x0A0f4321214BB6C7811dD8a71cF587bdaF03f0A0 |  
+| prompt | 0xC3287BDEF03b925A7C7f54791EDADCD88e632CcD |
+| SimplePrompt | 0xBC24514E541d5CBAAC1DD155187A171a593e5CF6 | 
+
+**Arbitrum Mainnet**
+
+| contract/EOA | Mainnet Address |
+|--|--|
+| OAO    | 0x0A0f4321214BB6C7811dD8a71cF587bdaF03f0A0 |  
+| prompt | 0xC20DeDbE8642b77EfDb4372915947c87b7a526bD |
+| SimplePrompt | 0xC3287BDEF03b925A7C7f54791EDADCD88e632CcD | 
+
+**Linea Mainnet**
+
+| contract/EOA | Sepolia Address |
+|--|--|
+| OAO    | 0x0A0f4321214BB6C7811dD8a71cF587bdaF03f0A0 |  
+| prompt | 0xC20DeDbE8642b77EfDb4372915947c87b7a526bD |
+| SimplePrompt | 0xb880d47d3894d99157b52a7f869ab3b1e2d4349d | 
+
+**Base Mainnet**
+
+| contract/EOA | Mainnet Address |
+|--|--|
+| OAO    | 0x0A0f4321214BB6C7811dD8a71cF587bdaF03f0A0 |  
+| prompt | 0xC20DeDbE8642b77EfDb4372915947c87b7a526bD |
+| SimplePrompt | 0xC3287BDEF03b925A7C7f54791EDADCD88e632CcD | 
+
+**Polygon Mainnet**
+
+| contract/EOA | Sepolia Address |
+|--|--|
+| OAO    | 0x0A0f4321214BB6C7811dD8a71cF587bdaF03f0A0 |  
+| prompt | 0xC20DeDbE8642b77EfDb4372915947c87b7a526bD |
+| SimplePrompt | 0xC3287BDEF03b925A7C7f54791EDADCD88e632CcD | 
+
+**Mantle Mainnet**
+
+| contract/EOA | Mainnet Address |
+|--|--|
+| OAO    | 0x0A0f4321214BB6C7811dD8a71cF587bdaF03f0A0 |  
+| prompt | 0xC20DeDbE8642b77EfDb4372915947c87b7a526bD |
+| SimplePrompt | 0xC3287BDEF03b925A7C7f54791EDADCD88e632CcD | 
+
+**Morph Mainnet**
+
+| contract/EOA | Mainnet Address |
+|--|--|
+| OAO    | 0x0A0f4321214BB6C7811dD8a71cF587bdaF03f0A0 |  
+| prompt | 0xC20DeDbE8642b77EfDb4372915947c87b7a526bD |
+| SimplePrompt | 0xC3287BDEF03b925A7C7f54791EDADCD88e632CcD | 
+
 Currently, you can use the onchain ML model by initiating an onchain transaction by interacting with Prompt contract. We have uploaded two models to OAO.
 
 | modelID | model| 
