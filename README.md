@@ -137,8 +137,13 @@ Currently, you can use the onchain ML model by initiating an onchain transaction
 
 | modelID | model| 
 | -- | -- |
-| 11 | llama |
-| 50 | Stable Diffusion (SD) |
+| 11      | llama                      |
+| 50      | Stable Diffusion (SD)      |
+| 7007    | 7007                       |
+| 13      | Open LM                    |
+| 14      | Open LM Score              |
+| 15      | Open LM Chat               |
+| 503     | Stable Diffusion V3 (SDv3) |
 
 ## Usage
 
