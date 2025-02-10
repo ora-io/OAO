@@ -133,6 +133,27 @@ Here are the OAO contracts deployed onchain:
 | prompt | 0xC20DeDbE8642b77EfDb4372915947c87b7a526bD |
 | SimplePrompt | 0xC3287BDEF03b925A7C7f54791EDADCD88e632CcD | 
 
+**Mode Mainnet**
+| contract/EOA | Mainnet Address |
+|--|--|
+| OAO    | 0x0A0f4321214BB6C7811dD8a71cF587bdaF03f0A0 |  
+| prompt | 0xC20DeDbE8642b77EfDb4372915947c87b7a526bD |
+| SimplePrompt | 0xC3287BDEF03b925A7C7f54791EDADCD88e632CcD | 
+
+**Mode Sepolia**
+| contract/EOA | Mainnet Address |
+|--|--|
+| OAO    | 0x0A0f4321214BB6C7811dD8a71cF587bdaF03f0A0 |  
+| prompt | 0xC20DeDbE8642b77EfDb4372915947c87b7a526bD |
+| SimplePrompt | 0xC3287BDEF03b925A7C7f54791EDADCD88e632CcD | 
+
+**BSC Mainnet**
+| contract/EOA | Mainnet Address |
+|--|--|
+| OAO    | 0x0A0f4321214BB6C7811dD8a71cF587bdaF03f0A0 |  
+| prompt | 0x76330A99fc9b82F1220187E54f462986216A536E |
+| SimplePrompt | 0xC20DeDbE8642b77EfDb4372915947c87b7a526bD | 
+
 Currently, you can use the onchain ML model by initiating an onchain transaction by interacting with Prompt contract. We have uploaded two models to OAO.
 
 | modelID | model| 
@@ -144,6 +165,57 @@ Currently, you can use the onchain ML model by initiating an onchain transaction
 | 14      | Open LM Score              |
 | 15      | Open LM Chat               |
 | 503     | Stable Diffusion V3 (SDv3) |
+
+AI API Models
+
+| model                                        | fee (ORA) (divided by 1e18) |
+|---------------------------------------------|-----------------------------|
+| meta-llama/Llama-3.3-70B-Instruct            | 0.18                        |
+| Qwen/QwQ-32B-Preview                         | 0.24                        |
+| Qwen/Qwen2.5-Coder-32B-Instruct              | 0.16                        |
+| meta-llama/Llama-3.2-3B-Instruct             | 0.01                        |
+| mistralai/Mixtral-8x22B-Instruct-v0.1        | 0.24                        |
+| meta-llama/Meta-Llama-3-70B-Instruct         | 0.18                        |
+| Qwen/Qwen2-72B-Instruct                      | 0.18                        |
+| google/gemma-2-27b-it                        | 0.16                        |
+| google/gemma-2-9b-it                         | 0.06                        |
+| mistralai/Mistral-7B-Instruct-v0.3           | 0.04                        |
+| google/gemma-2b-it                           | 0.02                        |
+| mistralai/Mistral-7B-Instruct-v0.2           | 0.04                        |
+| mistralai/Mixtral-8x7B-Instruct-v0.1         | 0.12                        |
+| mistralai/Mistral-7B-Instruct-v0.1           | 0.04                        |
+| meta-llama/Llama-2-13b-chat-hf               | 0.04                        |
+| meta-llama/Llama-2-7b-chat-hf                | 0.04                        |
+| meta-llama/Llama-3.1-405B-Instruct           | 0.7                         |
+| Qwen/Qwen2.5-72B-Instruct                    | 0.24                        |
+| meta-llama/Llama-3.2-1B-Instruct             | 0.01                        |
+| meta-llama/Meta-Llama-3-8B-Instruct          | 0.04                        |
+| black-forest-labs/FLUX.1-dev                 | 0.09                        |
+| black-forest-labs/FLUX.1-canny               | 0.09                        |
+| black-forest-labs/FLUX.1-redux-dev           | 0.09                        |
+| black-forest-labs/FLUX.1-schnell             | 0.01                        |
+| deepseek-ai/DeepSeek-V3                      | 0.25                        |
+| stabilityai/stable-diffusion-3.5-medium      | 0.13                        |
+| stabilityai/stable-diffusion-3-medium        | 0.13                        |
+| stabilityai/stable-diffusion-3.5-large       | 0.24                        |
+| stabilityai/stable-diffusion-3.5-large-turbo | 0.15                        |
+
+If you need to calculate the modelId of a specific model, please refer to the code below.
+
+```solidity
+function calcModelIdByName(string calldata modelName) public pure returns (uint256) {
+    return uint256(uint160(uint256(keccak256(bytes(modelName)))));
+}
+```
+or
+```javascript
+// modelIdString: 'openai/gpt-4o'
+function modelIdStringToBigInt(modelIdString) {
+  const hashedValue = ethers.keccak256(ethers.toUtf8Bytes(modelIdString));
+  const addressValue = `0x${hashedValue.slice(26)}`;
+  return BigInt(addressValue);
+}
+```
 
 ## Usage
 
