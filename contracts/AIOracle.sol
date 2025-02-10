@@ -4,11 +4,13 @@ pragma solidity ^0.8.9;
 
 import "./interfaces/IOpml.sol";
 import "./interfaces/IAIOracle.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract AIOracle is IAIOracle {
-
+    using SafeERC20 for IERC20;
     address constant public server = 0xf5aeB5A4B35be7Af7dBfDb765F99bCF479c917BD;
     bytes4 constant public callbackFunctionSelector = 0xb0347814;
+    bytes4 constant public errorFunctionSelector = 0x8e6fd006;
 
     modifier onlyOwner() {
         require(msg.sender == owner, "Not the owner");
@@ -38,6 +40,7 @@ contract AIOracle is IAIOracle {
         address receiver;
         uint256 receiverPercentage;
         uint256 accumulateRevenue;
+        address token;
     }
 
     mapping (uint256 => ModelData) models;
@@ -49,6 +52,18 @@ contract AIOracle is IAIOracle {
     address public owner;
 
     mapping(address => bool) public whitelist;
+    address public financialAdmin;
+
+    modifier onlyFinancialAdmin() {
+        require(msg.sender == financialAdmin, "Not the financial admin");
+        _;
+    }
+
+    function setFinancialAdmin(address _admin) external onlyOwner {
+        require(financialAdmin != _admin, "The new admin address must be different from the old address.");
+        require(_admin != address(0), "Invalid address");
+        financialAdmin = _admin;
+    }
 
     modifier onlyWhitelisted() {
         require(whitelist[msg.sender], "Address not whitelisted");
@@ -112,13 +127,18 @@ contract AIOracle is IAIOracle {
         if (model.accumulateRevenue > 0) {
             uint256 transferRevenue = model.accumulateRevenue;
             model.accumulateRevenue = 0;
-            (bool success, ) = (model.receiver).call{value: transferRevenue}("");
-            require(success, "claimModelRevenue transfer failed");            
+            if (model.token == address(0)) {
+                (bool success, ) = (model.receiver).call{value: transferRevenue}("");
+                require(success, "claimModelRevenue transfer failed");            
+            } else {
+                IERC20(model.token).safeTransfer(model.receiver, transferRevenue);
+            }
         }
+            
         // remove model
         modelExists[modelId] = false;
         // remove from modelIDs
-        for (uint i = 0; i < modelIDs.length; i++) {
+        for (uint i = 0; i < modelIDs.length;) {
             uint256 id = modelIDs[i];
             if (id == modelId) {
                 // Replace the element at index with the last element
@@ -127,19 +147,43 @@ contract AIOracle is IAIOracle {
                 modelIDs.pop();
                 break;
             }
+
+            unchecked {
+                ++i;
+            }
         }
     }
 
-    function withdraw() external onlyOwner {
-        uint256 modelRevenue;
-        for (uint i = 0; i < modelIDs.length; i++) {
-            uint256 id = modelIDs[i];
-            ModelData memory model = models[id];
-            modelRevenue += model.accumulateRevenue;
+    function withdraw(address token) external onlyFinancialAdmin {
+        if (token == address(0)) {
+            uint256 modelRevenue;
+            for (uint i = 0; i < modelIDs.length;) {
+                uint256 id = modelIDs[i];
+                ModelData memory model = models[id];
+                if (model.token == address(0)) {
+                    modelRevenue += model.accumulateRevenue;
+                }
+                unchecked {
+                    ++i;
+                }
+            }
+            uint256 ownerRevenue = address(this).balance - modelRevenue;
+            (bool success, ) = (msg.sender).call{value: ownerRevenue}("");
+            require(success, "withdraw failed");  
+        } else {
+            uint256 ownerRevenueOfToken = IERC20(token).balanceOf(address(this));
+            for (uint i = 0; i < modelIDs.length;) {
+                uint256 id = modelIDs[i];
+                ModelData memory model = models[id];
+                if (model.token == token) {
+                    ownerRevenueOfToken -= model.accumulateRevenue;
+                }
+                unchecked {
+                    ++i;
+                }
+            }
+            IERC20(token).safeTransfer(msg.sender, ownerRevenueOfToken);
         }
-        uint256 ownerRevenue = address(this).balance - modelRevenue;
-        (bool success, ) = (msg.sender).call{value: ownerRevenue}("");
-        require(success, "withdraw failed");
     }
 
     function setOpml(address newOpml) external onlyOwner {
@@ -162,17 +206,45 @@ contract AIOracle is IAIOracle {
         model.receiverPercentage = receiverPercentage;
     }
 
-    function getModel(uint256 modelId) external view ifModelExists(modelId) returns (ModelData memory) {
-        ModelData memory model = models[modelId];
-        return model;
+    function getModel(uint256 modelId) external view ifModelExists(modelId) returns (
+        bytes32 modelHash,
+        bytes32 programHash,
+        uint256 fee,
+        address receiver,
+        uint256 receiverPercentage,
+        uint256 accumulateRevenue,
+        address token
+    ) {
+        return (
+            models[modelId].modelHash,
+            models[modelId].programHash,
+            models[modelId].fee,
+            models[modelId].receiver,
+            models[modelId].receiverPercentage,
+            models[modelId].accumulateRevenue,
+            models[modelId].token
+        );
     }
 
     function estimateFee(uint256 modelId, uint256 gasLimit) public view ifModelExists(modelId) returns (uint256) {
         ModelData storage model = models[modelId];
-        return model.fee + gasPrice * gasLimit;
+        if(model.token == address(0)){
+            return model.fee + gasPrice * gasLimit;
+        } else {
+            return gasPrice * gasLimit;
+        }
     }
 
-    function uploadModel(uint256 modelId, bytes32 modelHash, bytes32 programHash, uint256 fee, address receiver, uint256 receiverPercentage) external onlyOwner {
+    function estimateFeeBatch(uint256 modelId, uint256 gasLimit, uint256 batchSize) public view ifModelExists(modelId) returns (uint256) {
+        ModelData storage model = models[modelId];
+        if (model.token == address(0)) {
+            return batchSize * model.fee + gasPrice * gasLimit;
+        } else {
+            return gasPrice * gasLimit;
+        }
+    }
+
+    function uploadModel(uint256 modelId, bytes32 modelHash, bytes32 programHash, uint256 fee, address receiver, uint256 receiverPercentage, address token) external onlyOwner {
         require(!modelExists[modelId], "model already exists");
         require(receiverPercentage <= 100, "percentage should be <= 100");
         modelExists[modelId] = true;
@@ -183,10 +255,11 @@ contract AIOracle is IAIOracle {
         model.fee = fee;
         model.receiver = receiver;
         model.receiverPercentage = receiverPercentage;
+        model.token = token;
         opml.uploadModel(modelHash, programHash);
     }
 
-    function updateModel(uint256 modelId, bytes32 modelHash, bytes32 programHash, uint256 fee, address receiver, uint256 receiverPercentage) external onlyOwner ifModelExists(modelId) {
+    function updateModel(uint256 modelId, bytes32 modelHash, bytes32 programHash, uint256 fee, address receiver, uint256 receiverPercentage, address token) external onlyOwner ifModelExists(modelId) {
         require(receiverPercentage <= 100, "percentage should be <= 100");
         ModelData storage model = models[modelId];
         model.modelHash = modelHash;
@@ -194,6 +267,7 @@ contract AIOracle is IAIOracle {
         model.fee = fee;
         model.receiver = receiver;
         model.receiverPercentage = receiverPercentage;
+        model.token = token;
         opml.uploadModel(modelHash, programHash);
     }
     
@@ -201,19 +275,30 @@ contract AIOracle is IAIOracle {
         return opml.isFinalized(requestId);
     }
 
-    // view function
+    // AIOracle should validate all parameters from request
     function _validateParams(
+        uint256 batchSize,
         uint256 modelId,
-        bytes memory input, 
-        address callbackContract, 
-        uint64 gasLimit
+        bytes memory input,
+        address callbackContract,
+        uint64 gasLimit,
+        bytes memory /* callbackData */,
+        DA inputDA,
+        DA /* outputDA */
     ) internal ifModelExists(modelId) notBlacklisted(callbackContract) {
         ModelData storage model = models[modelId];
-        require(msg.value >= model.fee + gasPrice * gasLimit, "insufficient fee");
-        model.accumulateRevenue += model.fee * model.receiverPercentage / 100;
+        if(model.token == address(0)){
+            require(msg.value >= batchSize * model.fee + gasPrice * gasLimit, "insufficient fee");
+        } else {
+            require(msg.value >= gasPrice * gasLimit, "insufficient fee");
+            IERC20(model.token).safeTransferFrom(msg.sender, address(this), batchSize * model.fee);
+        }
+
+        model.accumulateRevenue += batchSize * model.fee * model.receiverPercentage / 100;
         require(input.length > 0, "input not uploaded");
         bool noCallback = callbackContract == address(0);
         require(noCallback == (gasLimit == 0), "Invalid gasLimit");
+        require(inputDA != DA.IPFS, "inputDA should not be IPFS");
     }
 
     function requestCallback(
@@ -224,7 +309,7 @@ contract AIOracle is IAIOracle {
         bytes memory callbackData
     ) external payable returns (uint256) {
         // validate params
-        _validateParams(modelId, input, callbackContract, gasLimit);
+        _validateParams(1, modelId, input, callbackContract, gasLimit, callbackData, DA.Calldata, DA.Calldata);
 
         ModelData memory model = models[modelId];
 
@@ -246,6 +331,75 @@ contract AIOracle is IAIOracle {
 
         return requestId;
     }
+    
+    // Support requestCallback with DA parameters.
+    function requestCallback(
+        uint256 modelId,
+        bytes memory input,
+        address callbackContract,
+        uint64 gasLimit,
+        bytes memory callbackData,
+        DA inputDA,
+        DA outputDA
+    ) external payable returns (uint256) {
+        // validate params
+        _validateParams(1, modelId, input, callbackContract, gasLimit, callbackData, inputDA, outputDA);
+
+        ModelData memory model = models[modelId];
+
+        // init opml request
+        uint256 requestId = opml.initOpmlRequest(model.modelHash, model.programHash, input);
+
+        // store the request so that anyone can update the result according to the opml
+        AICallbackRequestData storage request = requests[requestId];
+        request.account = msg.sender;
+        request.requestId = requestId;
+        request.modelId = modelId;
+        request.input = input;
+        request.callbackContract = callbackContract;
+        request.gasLimit = gasLimit;
+        request.callbackData = callbackData;
+
+        // Emit event
+        emit AICallbackRequest(request.account, requestId, modelId, input, callbackContract, gasLimit, callbackData, inputDA, outputDA, 1);
+
+        return requestId;
+    }
+
+    // Batch inference, params should adopt specific input format
+    function requestBatchInference(
+        uint256 batchSize,
+        uint256 modelId,
+        bytes memory input,
+        address callbackContract,
+        uint64 gasLimit,
+        bytes memory callbackData,
+        DA inputDA,
+        DA outputDA
+    ) external payable returns (uint256) {
+        // validate params
+        _validateParams(batchSize, modelId, input, callbackContract, gasLimit, callbackData, inputDA, outputDA);
+
+        ModelData memory model = models[modelId];
+
+        // init opml request
+        uint256 requestId = opml.initOpmlRequest(model.modelHash, model.programHash, input);
+
+        // store the request so that anyone can update the result according to the opml
+        AICallbackRequestData storage request = requests[requestId];
+        request.account = msg.sender;
+        request.requestId = requestId;
+        request.modelId = modelId;
+        request.input = input;
+        request.callbackContract = callbackContract;
+        request.gasLimit = gasLimit;
+        request.callbackData = callbackData;
+
+        // Emit event
+        emit AICallbackRequest(request.account, requestId, modelId, input, callbackContract, gasLimit, callbackData, inputDA, outputDA, batchSize);
+
+        return requestId;
+    }
 
     // any can call this function
     function claimModelRevenue(uint256 modelId) external ifModelExists(modelId) {
@@ -253,29 +407,34 @@ contract AIOracle is IAIOracle {
         require(model.accumulateRevenue > 0, "accumulate revenue is 0");
         uint256 transferRevenue = model.accumulateRevenue;
         model.accumulateRevenue = 0;
-        (bool success, ) = (model.receiver).call{value: transferRevenue}("");
-        require(success, "claimModelRevenue transfer failed");
+
+        if (model.token == address(0)) {
+            (bool success, ) = (model.receiver).call{value: transferRevenue}("");
+            require(success, "claimModelRevenue transfer failed");
+        } else {
+            IERC20(model.token).safeTransfer(model.receiver, transferRevenue);
+        }
     }
 
-    function getOutput(uint256 requestId) external view returns (bytes memory output) {
-        return opml.getOutput(requestId);
+    function getOutputHash(uint256 requestId) external view returns (bytes32) {
+        return opml.getOutputHash(requestId);
     }
 
     // call this function if the opml result is challenged and updated!
     // anyone can call it!
-    function updateResult(uint256 requestId) external {
+    function updateResult(uint256 requestId, bytes calldata output) external {
+        require(output.length > 0, "can not upload a zero-length output");
         // read request of requestId
         AICallbackRequestData storage request = requests[requestId];
 
         // get Latest output of request
-        bytes memory output = opml.getOutput(requestId);
-        require(output.length > 0, "output not uploaded");
+        bytes32 outputHash = opml.getOutputHash(requestId);
+        require(outputHash == keccak256(output), "output should match opml result");
 
         // invoke callback
         if(request.callbackContract != address(0)) {
             bytes memory payload = abi.encodeWithSelector(callbackFunctionSelector, request.requestId, output, request.callbackData);
             (bool success, bytes memory data) = request.callbackContract.call{gas: request.gasLimit}(payload);
-            require(success, "failed to call selector");
             if (!success) {
                 assembly {
                     revert(add(data, 32), mload(data))
@@ -309,5 +468,27 @@ contract AIOracle is IAIOracle {
         emit AICallbackResult(request.account, requestId, msg.sender, output);
 
         gasPrice = tx.gasprice;
+    }
+
+    // invoke aiOracleCallbackError of client contract
+    function feedbackError(uint256 requestId, AIOracleError code, bytes calldata message) external onlyWhitelisted {
+        // read request of requestId
+        AICallbackRequestData memory request = requests[requestId];
+
+        // invoke callback
+        require(request.callbackContract != address(0), "no callback contract");
+        bytes memory payload = abi.encodeWithSelector(errorFunctionSelector, request.requestId, code, message, request.callbackData);
+        (bool success, bytes memory data) = request.callbackContract.call{gas: request.gasLimit}(payload);
+        require(success, "failed to call selector");
+        if (!success) {
+            assembly {
+                revert(add(data, 32), mload(data))
+            }
+        }
+    }
+
+    function confirm(uint256 requestId, bytes32 outputHash) external {
+        opml.confirm(requestId, outputHash);
+        emit Confirm(msg.sender, requestId, outputHash);
     }
 }
