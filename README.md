@@ -199,8 +199,8 @@ AI API Models
 | stabilityai/stable-diffusion-3-medium        | 0.13                        |
 | stabilityai/stable-diffusion-3.5-large       | 0.24                        |
 | stabilityai/stable-diffusion-3.5-large-turbo | 0.15                        |
-| openai/gpt-4o                                | 1.00                        |
-| openai/dall-e-2                              | 1.00                        |
+| openai/gpt-4o                                | 0.09                        |
+| openai/dall-e-2                              | 0.01                        |
 | kling-ai/kling-v1                            | 1.00                        |
 | kling-ai/kling-v1-6                          | 1.00                        |
 
