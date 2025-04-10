@@ -41,6 +41,7 @@ contract AIOracle is IAIOracle {
         uint256 receiverPercentage;
         uint256 accumulateRevenue;
         address token;
+        bool unverifiable;
     }
 
     mapping (uint256 => ModelData) models;
@@ -213,7 +214,8 @@ contract AIOracle is IAIOracle {
         address receiver,
         uint256 receiverPercentage,
         uint256 accumulateRevenue,
-        address token
+        address token,
+        bool unverifiable
     ) {
         return (
             models[modelId].modelHash,
@@ -222,7 +224,8 @@ contract AIOracle is IAIOracle {
             models[modelId].receiver,
             models[modelId].receiverPercentage,
             models[modelId].accumulateRevenue,
-            models[modelId].token
+            models[modelId].token,
+            models[modelId].unverifiable
         );
     }
 
@@ -244,7 +247,7 @@ contract AIOracle is IAIOracle {
         }
     }
 
-    function uploadModel(uint256 modelId, bytes32 modelHash, bytes32 programHash, uint256 fee, address receiver, uint256 receiverPercentage, address token) external onlyOwner {
+    function uploadModel(uint256 modelId, bytes32 modelHash, bytes32 programHash, uint256 fee, address receiver, uint256 receiverPercentage, address token, bool unverifiable) external onlyOwner {
         require(!modelExists[modelId], "model already exists");
         require(receiverPercentage <= 100, "percentage should be <= 100");
         modelExists[modelId] = true;
@@ -256,10 +259,11 @@ contract AIOracle is IAIOracle {
         model.receiver = receiver;
         model.receiverPercentage = receiverPercentage;
         model.token = token;
+        model.unverifiable = unverifiable;
         opml.uploadModel(modelHash, programHash);
     }
 
-    function updateModel(uint256 modelId, bytes32 modelHash, bytes32 programHash, uint256 fee, address receiver, uint256 receiverPercentage, address token) external onlyOwner ifModelExists(modelId) {
+    function updateModel(uint256 modelId, bytes32 modelHash, bytes32 programHash, uint256 fee, address receiver, uint256 receiverPercentage, address token, bool unverifiable) external onlyOwner ifModelExists(modelId) {
         require(receiverPercentage <= 100, "percentage should be <= 100");
         ModelData storage model = models[modelId];
         model.modelHash = modelHash;
@@ -268,6 +272,7 @@ contract AIOracle is IAIOracle {
         model.receiver = receiver;
         model.receiverPercentage = receiverPercentage;
         model.token = token;
+        model.unverifiable = unverifiable;
         opml.uploadModel(modelHash, programHash);
     }
     
@@ -301,6 +306,20 @@ contract AIOracle is IAIOracle {
         require(inputDA != DA.IPFS, "inputDA should not be IPFS");
     }
 
+    function getRequestId(uint256 model, bytes memory input, address callbackContract, uint64 gasLimit, bytes memory callbackData) internal view returns (uint256) {
+        return uint256(keccak256(
+            abi.encodePacked(
+                model,
+                input,
+                callbackContract,
+                gasLimit,
+                callbackData,
+                msg.sender,
+                block.timestamp
+            )
+        ));
+    }
+
     function requestCallback(
         uint256 modelId,
         bytes memory input,
@@ -313,8 +332,14 @@ contract AIOracle is IAIOracle {
 
         ModelData memory model = models[modelId];
 
-        // init opml request
-        uint256 requestId = opml.initOpmlRequest(model.modelHash, model.programHash, input);
+        // get requestId from opml
+        uint256 requestId;
+        if(model.unverifiable){
+            requestId = getRequestId(modelId, input, callbackContract, gasLimit, callbackData);
+        } else {
+            requestId = opml.initOpmlRequest(model.modelHash, model.programHash, input);
+        }
+        
 
         // store the request so that anyone can update the result according to the opml
         AICallbackRequestData storage request = requests[requestId];
@@ -448,10 +473,13 @@ contract AIOracle is IAIOracle {
     // payload includes (function selector, input, output)
     function invokeCallback(uint256 requestId, bytes calldata output) external onlyWhitelisted {
         // read request of requestId
-        AICallbackRequestData storage request = requests[requestId];
+        AICallbackRequestData memory request = requests[requestId];
         
         // others can challenge if the result is incorrect!
-        opml.uploadResult(requestId, output);
+        ModelData memory model = models[request.modelId];
+        if(!model.unverifiable) {
+            opml.uploadResult(requestId, output);   
+        }
 
         // invoke callback
         if(request.callbackContract != address(0)) {
