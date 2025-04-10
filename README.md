@@ -199,6 +199,10 @@ AI API Models
 | stabilityai/stable-diffusion-3-medium        | 0.13                        |
 | stabilityai/stable-diffusion-3.5-large       | 0.24                        |
 | stabilityai/stable-diffusion-3.5-large-turbo | 0.15                        |
+| openai/gpt-4o                                | 1.00                        |
+| openai/dall-e-2                              | 1.00                        |
+| kling-ai/kling-v1                            | 1.00                        |
+| kling-ai/kling-v1-6                          | 1.00                        |
 
 If you need to calculate the modelId of a specific model, please refer to the code below.
 
