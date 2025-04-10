@@ -55,6 +55,10 @@ contract SimplePrompt is AIOracleCallbackReceiver {
         emit promptsUpdated(requestId, string(output), callbackData);
     }
 
+    function aiOracleCallbackError(uint256 requestId, AIOracleError code, bytes calldata message, bytes calldata callbackData) external override onlyAIOracleCallback() {
+        emit AICallbackError(requestId, code, message, callbackData);
+    }
+
     function estimateFee(uint256 modelId) public view returns (uint256) {
         return aiOracle.estimateFee(modelId, callbackGasLimit[modelId]);
     }

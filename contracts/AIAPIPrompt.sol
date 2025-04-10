@@ -59,7 +59,7 @@ contract AIAPIPrompt is AIOracleCallbackReceiver {
         emit AICallbackError(requestId, code, message, callbackData);
     }
 
-    function calcModelIdByName(string calldata modelName) public pure returns (uint256) {
+    function calcModelIdByName(string memory modelName) public pure returns (uint256) {
         return uint256(uint160(uint256(keccak256(bytes(modelName)))));
     }
 
@@ -67,7 +67,7 @@ contract AIAPIPrompt is AIOracleCallbackReceiver {
         return aiOracle.estimateFee(calcModelIdByName(modelName), callbackGasLimit);
     }
 
-    function _requestAIOracle(string calldata modelName, bytes memory jsonInput) private {
+    function _requestAIOracle(string memory modelName, bytes memory jsonInput) private {
         uint256 modelId = calcModelIdByName(modelName);
         ( , ,uint256 fee, , , ,address token,) = IAIOracle(aiOracle).getModel(modelId);
 
@@ -95,6 +95,35 @@ contract AIAPIPrompt is AIOracleCallbackReceiver {
         bytes memory jsonInput = abi.encodePacked(
             '{"model":"', modelName, '",',
             '"prompt": "', bytes(prompt),'"}'
+        );
+
+        _requestAIOracle(modelName, jsonInput);
+    }
+
+    function calculateAIImage2ImageResult(string calldata modelName, string calldata prompt, string calldata init_image_cid) payable external {
+        bytes memory jsonInput = abi.encodePacked(
+            '{"model":"', modelName, '",',
+            '"prompt": "', bytes(prompt),'",',
+            '"init_image": "', bytes(init_image_cid),'"}'
+        );
+
+        _requestAIOracle(modelName, jsonInput);
+    }
+
+    function calculateAIText2VideoResult(string calldata modelName, string calldata prompt) payable external {
+        bytes memory jsonInput = abi.encodePacked(
+            '{"model":"', modelName, '",',
+            '"prompt": "', bytes(prompt),'"}'
+        );
+
+        _requestAIOracle(modelName, jsonInput);
+    }
+
+    function calculateAIImage2VideoResult(string calldata modelName, string calldata prompt, string calldata image_cid) payable external {
+        bytes memory jsonInput = abi.encodePacked(
+            '{"model":"', modelName, '",',
+            '"prompt": "', bytes(prompt),'",',
+            '"image": "', bytes(image_cid),'"}'
         );
 
         _requestAIOracle(modelName, jsonInput);
