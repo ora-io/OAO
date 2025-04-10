@@ -29,7 +29,8 @@ contract OpenAIPrompt is AIOracleCallbackReceiver {
         bytes output;
     }
 
-    uint256 public modelId;
+    uint256 public gpt4oModelId;
+    uint256 public dalle2ModelId;
     uint64 public callbackGasLimit;
 
     address immutable owner;
@@ -45,7 +46,8 @@ contract OpenAIPrompt is AIOracleCallbackReceiver {
     /// @notice Initialize the contract, binding it to a specified AIOracle.
     constructor(IAIOracle _aiOracle) AIOracleCallbackReceiver(_aiOracle) {
         owner = msg.sender;
-        modelId = 0xa1; // OpenAI 
+        gpt4oModelId = 1418312085442921183558972613383104240625681548639; // OpenAI/GPT-4o
+        dalle2ModelId = 1026312455553990538593839730755758166047834159184; // OpenAI/Dall.E-2
         callbackGasLimit = 2500000;
     }
 
@@ -62,19 +64,19 @@ contract OpenAIPrompt is AIOracleCallbackReceiver {
         emit AICallbackError(requestId, code, message, callbackData);
     }
 
-    function estimateFee() public view returns (uint256) {
+    function estimateFee(uint256 modelId) public view returns (uint256) {
         return aiOracle.estimateFee(modelId, callbackGasLimit);
     }
 
     // chat completion with aiOracle.requestCallback
     function openAIChatCompletion(string calldata prompt) payable external {
+        uint256 modelId = gpt4oModelId;
         bytes memory promptBytes = bytes(prompt);
 
         bytes memory jsonInput = abi.encodePacked(
             '{"method":"v1/chat/completions",',
             '"simplify":true,',
             '"data":{',
-            '"model":"gpt-4o",',
             '"messages":[',
             '{"role":"system","content":"You are a helpful assistant."},',
             '{"role":"user","content":"', promptBytes, '"}',
@@ -83,7 +85,7 @@ contract OpenAIPrompt is AIOracleCallbackReceiver {
 
         uint256 fee;
         address token;
-        ( , , fee, , , , token) = IAIOracle(aiOracle).getModel(modelId);
+        ( , , fee, , , , token,) = IAIOracle(aiOracle).getModel(modelId);
 
         if(token != address(0)) {
             IERC20(token).safeTransferFrom(msg.sender, address(this), fee);
@@ -97,30 +99,29 @@ contract OpenAIPrompt is AIOracleCallbackReceiver {
     }
 
     // images generations with aiOracle.requestCallback with DA parameters.
-    function openAIImageGeneration(string calldata prompt, uint256 batchSize) payable external {
+    function openAIImageGeneration(string calldata prompt) payable external {
+        uint256 modelId = dalle2ModelId;
         bytes memory promptBytes = bytes(prompt);
         bytes memory jsonInput = abi.encodePacked(
             '{"method":"v1/images/generations",',
             '"simplify":true,',
             '"data":{',
-            '"model":"dall-e-2",',
             '"prompt":"', promptBytes, '",'
             '"size":"1024x1024"',
             '}}'
         );
-        require(batchSize > 0, "batchSize should be > 0");
 
         uint256 fee;
         address token;
-        ( , , fee, , , , token) = IAIOracle(aiOracle).getModel(modelId);
+        ( , , fee, , , , token,) = IAIOracle(aiOracle).getModel(modelId);
 
         if(token != address(0)) {
-            IERC20(token).safeTransferFrom(msg.sender, address(this), fee * batchSize);
-            IERC20(token).safeIncreaseAllowance(address(aiOracle), fee * batchSize);
+            IERC20(token).safeTransferFrom(msg.sender, address(this), fee);
+            IERC20(token).safeIncreaseAllowance(address(aiOracle), fee);
         }
 
-        uint256 requestId = aiOracle.requestBatchInference{value: msg.value}(
-            batchSize, modelId, jsonInput, address(this), callbackGasLimit, "", IAIOracle.DA.Calldata, IAIOracle.DA.IPFS
+        uint256 requestId = aiOracle.requestCallback{value: msg.value}(
+            modelId, jsonInput, address(this), callbackGasLimit, "", IAIOracle.DA.Calldata, IAIOracle.DA.IPFS
         );
         emit promptRequest(requestId, msg.sender, modelId, prompt);
     }
